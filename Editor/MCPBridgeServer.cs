@@ -268,11 +268,13 @@ namespace UnityMCP.Editor
                 }
 
                 // ═══ Deferred paths (Unity APIs with async callbacks) ═══
+                // Called directly from the HTTP thread — NOT through the ticket queue.
+                // ExecuteOnMainThreadDeferred blocks until a future-frame callback fires,
+                // which would deadlock if run on the main thread via the queue.
                 if (_deferredRoutes.TryGetValue(apiPath, out var deferredHandler))
                 {
-                    var result = MCPRequestQueue.ExecuteWithTracking(agentId, apiPath,
-                        () => ExecuteOnMainThreadDeferred(resolve =>
-                            deferredHandler(ParseJson(body), resolve)));
+                    var result = ExecuteOnMainThreadDeferred(resolve =>
+                        deferredHandler(ParseJson(body), resolve));
                     SendJson(response, 200, result);
                     return;
                 }
